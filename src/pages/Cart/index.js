@@ -5,9 +5,45 @@ import {
   MdDelete,
 } from 'react-icons/md';
 
+import { useSelector, useDispatch } from 'react-redux';
+
+import {
+  removeFromCart,
+  updateAmountRequest,
+} from '../../store/modules/cart/actions';
+
+import { formatPrice } from '../../util/format';
 import { Container, ProductTable, Total } from './styles';
 
 export default function Cart() {
+  const cartProducts = useSelector(state =>
+    state.cart.map(product => ({
+      ...product,
+      formattedSubTotal: formatPrice(product.price * product.amount),
+    }))
+  );
+  const productsTotal = useSelector(state =>
+    formatPrice(
+      state.cart.reduce(
+        (sumTotal, product) => sumTotal + product.price * product.amount,
+        0
+      )
+    )
+  );
+
+  const dispatch = useDispatch();
+
+  function handleIncrement(product) {
+    dispatch(updateAmountRequest(product.id, product.amount + 1));
+  }
+  function handleDecrement(product) {
+    dispatch(updateAmountRequest(product.id, product.amount - 1));
+  }
+
+  function handleDelete(id) {
+    dispatch(removeFromCart(id));
+  }
+
   return (
     <Container>
       <ProductTable>
@@ -22,37 +58,42 @@ export default function Cart() {
         </thead>
 
         <tbody>
-          <tr>
-            <td>
-              <img
-                src="https://static.netshoes.com.br/produtos/tenis-olympikus-liberty-2/06/D22-3008-006/D22-3008-006_detalhe1.jpg?resize=280:280"
-                alt="Sapato"
-              />
-            </td>
-            <td>
-              <strong>Tênis muito legal</strong>
-              <span>R$129,00</span>
-            </td>
-            <td>
-              <div>
-                <button type="button">
-                  <MdRemoveCircleOutline size={20} color="#7159c1" />
+          {cartProducts.map(product => (
+            <tr key={product.id}>
+              <td>
+                <img src={product.image} alt={product.title} />
+              </td>
+              <td>
+                <strong>{product.title}</strong>
+                <span>{product.priceFormatted}</span>
+              </td>
+              <td>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => handleDecrement(product)}
+                  >
+                    <MdRemoveCircleOutline size={20} color="#7159c1" />
+                  </button>
+                  <input type="number" readOnly value={product.amount} />
+                  <button
+                    type="button"
+                    onClick={() => handleIncrement(product)}
+                  >
+                    <MdAddCircleOutline size={20} color="#7159c1" />
+                  </button>
+                </div>
+              </td>
+              <td>
+                <strong>{product.formattedSubTotal}</strong>
+              </td>
+              <td>
+                <button type="button" onClick={() => handleDelete(product.id)}>
+                  <MdDelete size={20} color="#7159c1" />
                 </button>
-                <input type="number" readOnly value={2} />
-                <button type="button">
-                  <MdAddCircleOutline size={20} color="#7159c1" />
-                </button>
-              </div>
-            </td>
-            <td>
-              <strong>278,00</strong>
-            </td>
-            <td>
-              <button type="button">
-                <MdDelete size={20} color="#7159c1" />
-              </button>
-            </td>
-          </tr>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </ProductTable>
 
@@ -61,7 +102,7 @@ export default function Cart() {
 
         <Total>
           <span>TOTAL</span>
-          <strong>273,00</strong>
+          <strong>{productsTotal}</strong>
         </Total>
       </footer>
     </Container>
