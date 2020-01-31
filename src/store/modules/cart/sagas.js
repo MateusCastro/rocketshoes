@@ -1,34 +1,62 @@
-import { call, put, all, takeLatest } from 'redux-saga/effects';
-import api from '../../../services/api';
+import { call, select, put, all, takeLatest } from 'redux-saga/effects';
+import { toast } from 'react-toastify';
 
-import { addToCartSuccess } from './actions';
+import api from '../../../services/api';
+import history from '../../../services/history';
+
+import {
+  addToCartSuccess,
+  updateAmountRequest,
+  updateAmountSuccess,
+} from './actions';
 
 function* addToCart({ id }) {
-  const response = yield call(api.get, `/products/${id}`);
-  console.tron.log(response);
+  const { data } = yield call(api.get, `/products/${id}`);
 
-  yield put(addToCartSuccess(response.data));
-}
+  const productExists = yield select(state =>
+    state.cart.find(p => p.id === id)
+  );
 
-/* function* updateAmount(action) {
-  const { id, amount: nextAmount } = action;
-  if (nextAmount <= 0) return;
-  yield put(updateLoading(id, true));
+  const stock = yield call(api.get, `/stock/${id}`);
 
-  const {
-    data: { amount: stockAmount },
-  } = yield call(api.get, `/stock/${id}`);
+  const stockAmount = stock.data.amount;
+  const currentAmount = productExists ? productExists.amount : 0;
+
+  const nextAmount = currentAmount + 1;
 
   if (nextAmount > stockAmount) {
     toast.error('Quantidade indisponível no estoque');
-    yield put(updateLoading(id, false));
     return;
   }
-  yield put(updateAmountSuccess(id, nextAmount));
-  yield put(updateLoading(id, false));
-} */
+
+  if (productExists) {
+    yield put(updateAmountRequest(id, nextAmount));
+  } else {
+    const product = {
+      ...data,
+      amount: 1,
+    };
+
+    yield put(addToCartSuccess(product));
+    history.push('/cart');
+  }
+}
+
+function* updateAmount({ id, amount }) {
+  if (amount <= 0) return;
+
+  const stock = yield call(api.get, `/stock/${id}`);
+  const stockAmount = stock.data.amount;
+
+  if (amount > stockAmount) {
+    toast.error('Quantidade indisponível no estoque');
+    return;
+  }
+
+  yield put(updateAmountSuccess(id, amount));
+}
 
 export default all([
   takeLatest('@cart/ADD_REQUEST', addToCart),
-  // takeLatest('@cart/UPDATE_AMOUNT_REQUEST', updateAmount),
+  takeLatest('@cart/UPDATE_AMOUNT_REQUEST', updateAmount),
 ]);

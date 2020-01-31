@@ -20,7 +20,6 @@ export default function Home() {
   const dispatch = useDispatch();
 
   useEffect(() => {
-    console.tron.log(123);
     async function loadProducts() {
       const response = await api.get('products');
 
